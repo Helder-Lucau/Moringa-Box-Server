@@ -7,7 +7,9 @@ db = SQLAlchemy(app)
 
 class User(db.Model):
     user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    username = db.Column(db.String(255))
+    first_name = db.Column(db.String(255))
+    last_name = db.column(db.String(255))
+
     email = db.Column(db.String(255))
     password = db.Column(db.String(255))
     folders = db.relationship('Folder', backref='user', lazy=True)
