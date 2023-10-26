@@ -8,3 +8,26 @@ from wtforms import StringField, PasswordField
 from wtforms.validators import DataRequired, Length
 from datetime import datetime
 from models import db
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your_secret_key'
+app.config['JWT_SECRET_KEY'] = 'jwt_secret_key'
+
+
+app.config['WTF_CSRF_ENABLED'] = False
+
+jwt = JWTManager(app)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///moringa_box.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+app.json.compact = False
+
+migrate = Migrate(app, db)
+CORS(app)
+
+db.init_app(app)
+api = Api(app)
+
+if __name__ == '__main__':
+    app.run(port=5555, debug=True)
