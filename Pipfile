@@ -13,6 +13,7 @@ flask-jwt-extended = "*"
 faker = "*"
 flask-wtf = "*"
 sqlalchemy-serializer = "*"
+pytest = "*"
 
 [dev-packages]
 
