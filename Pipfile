@@ -14,6 +14,8 @@ faker = "*"
 flask-wtf = "*"
 sqlalchemy-serializer = "*"
 pytest = "*"
+gunicorn = "*"
+psycopg2-binary = "*"
 
 [dev-packages]
 
