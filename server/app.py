@@ -18,7 +18,7 @@ app.config['WTF_CSRF_ENABLED'] = False
 
 jwt = JWTManager(app)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///moringa_box.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://moringa_box_db_user:S3Yg6LuOyiinvffLP4Y7MMuXx9vbZDAj@dpg-ckta8co168ec73bopsfg-a.oregon-postgresql.render.com/moringa_box_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 app.json.compact = False
