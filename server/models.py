@@ -53,7 +53,7 @@ class Folder(db.Model, SerializerMixin):
     folder_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     folder_name = db.Column(db.String(255), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
-    parent_folder_id = db.Column(db.Integer)
+    parent_folder_id = db.Column(db.Integer, db.ForeignKey('folders.folder_id'), nullable=False)
 
     subfolders = db.relationship('Folder', backref=db.backref('parent', remote_side=[folder_id]))
     files = db.relationship('File', backref='folder', lazy=True)
