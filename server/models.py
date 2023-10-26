@@ -5,6 +5,7 @@ db = SQLAlchemy()
 
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
+    
     user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     first_name = db.Column(db.String(255), nullable=False)
     last_name = db.Column(db.String(255), nullable=False)
@@ -28,7 +29,7 @@ class File(db.Model, SerializerMixin):
     file_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     file_name = db.Column(db.String(255), nullable=False)
     file_path = db.Column(db.String(255), nullable=False)
-    file_image = db.Column(db.String(255)),
+    file_image = db.Column(db.String(255))
     file_type = db.Column(db.String(255), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
     folder_id = db.Column(db.Integer, db.ForeignKey('folders.folder_id'), nullable=False)
