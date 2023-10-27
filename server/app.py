@@ -29,60 +29,6 @@ CORS(app)
 db.init_app(app)
 api = Api(app)
 
-<<<<<<< HEAD
-=======
-class RegistrationForm(FlaskForm):
-    firstName = StringField('Lastname', validators=[DataRequired(),Length(min=4,max=255)])
-    lastName = StringField('Lastname', validators=[DataRequired(),Length(min=4,max=255)])
-    email = StringField('Email', validators=[DataRequired(),Email(),Length(max=255)])
-    password = PasswordField('Password',validators=[DataRequired(),Length(min=255)])
-    
-class UserRegistrationResource(Resource):
-    def post(self):
-        data = request.get_json()
-        form = RegistrationForm(data=data)
-        
-        if form.validate():
-            first_name = form.firstName.data
-            last_name = form.lastName.data
-            email = form.email.data
-            password = form.password.data
-
-            if User.query.filter(User.email == email).first() is not None:
-                return {'message': 'Username already exists'}, 400
-            
-            new_user = User(firstname=first_name, lastname=last_name, email=email, password=password)
-            db.session.add(new_user)
-            db.session.commit()
-            access_token = create_access_token(identity=new_user.id)
-
-            return {
-                'message': "User registered successfully",
-                'access_token': access_token
-            }, 201
-        else:
-            return {'message': 'Validation errors', 'errors': form.errors}, 400
-
-api.add_resource(UserRegistrationResource, '/register')
-
-class UserLogInResource(Resource):
-    def post(self):
-        data = request.get_json()
-        email = data.get('email')
-        password = data.get('password')
-        if not email or not password:
-            return{'message':'email and password required'},400
-        
-        user = User.query.filter_by(username=email).first()
-        if user and user.password == password:
-            access_token= create_access_token(identity=user.id)
-            return {'access token':access_token},200
-        else:
-            return {'message':'Invalid credentials'},401
-        
-api.add_resource(UserLogInResource,'/login')
-
->>>>>>> 49648617cd6d1c4769a4ff2a6241922d8b7038a8
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
