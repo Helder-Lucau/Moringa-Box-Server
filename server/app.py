@@ -1,17 +1,22 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_migrate import Migrate
 from flask_cors import CORS
-from flask_restful import Api, Resource
+from flask_restful import Api, Resource,reqparse, abort
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
+from werkzeug.datastructures import FileStorage
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField
 from wtforms.validators import DataRequired, Length, Email 
 from datetime import datetime
 from models import db, User, File, Folder
+import os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['JWT_SECRET_KEY'] = 'jwt_secret_key'
+
+current_directory = os.getcwd()  
+app.config['UPLOAD_FOLDER'] = os.path.join(current_directory, 'uploads')
 
 
 app.config['WTF_CSRF_ENABLED'] = False
@@ -79,6 +84,54 @@ class UserLogInResource(Resource):
             return {'message':'Invalid credentials'},401
         
 api.add_resource(UserLogInResource,'/login')
+
+class FolderListResource(Resource):
+    @jwt_required()
+    def get(self):
+        folders = Folder.query.all()
+        folder_list = [{'folder_id': folder.folder_id, 'folder_name': folder.folder_name} for folder in folders]
+        return {'folders': folder_list}, 200
+
+class FolderUploadResource(Resource):
+    @jwt_required()
+    def post(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('folder_name', type=str, required=True)
+        parser.add_argument('parent_folder_id', type=int)  
+
+        args = parser.parse_args()
+        folder_name = args['folder_name']
+        current_user_id = get_jwt_identity()
+        parent_folder_id = args.get('parent_folder_id')
+
+        new_folder = Folder(
+            folder_name=folder_name,
+            user_id=current_user_id,
+            parent_folder_id=parent_folder_id,  
+        )
+        db.session.add(new_folder)
+        db.session.commit()
+
+        return {'message': 'Folder uploaded successfully'}, 200
+
+class FolderResource(Resource):
+    @jwt_required()
+    def delete(self, folder_id):
+        folder_to_delete = Folder.query.get(folder_id)
+        if folder_to_delete:
+
+            files_in_folder = File.query.filter_by(folder_id=folder_id).all()
+            for file in files_in_folder:
+                db.session.delete(file)
+
+            db.session.delete(folder_to_delete)
+            db.session.commit()
+            return {'message': f'Folder {folder_id} deleted successfully'}, 200
+        return {'message': f'Folder {folder_id} not found'}, 404
+
+api.add_resource(FolderListResource, '/folders')
+api.add_resource(FolderUploadResource, '/upload_folder')
+api.add_resource(FolderResource, '/folder/<int:folder_id>')
 
 
 if __name__ == '__main__':
