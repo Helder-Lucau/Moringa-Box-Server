@@ -119,7 +119,7 @@ class FolderResource(Resource):
     def delete(self, folder_id):
         folder_to_delete = Folder.query.get(folder_id)
         if folder_to_delete:
-
+            
             files_in_folder = File.query.filter_by(folder_id=folder_id).all()
             for file in files_in_folder:
                 db.session.delete(file)
@@ -132,6 +132,82 @@ class FolderResource(Resource):
 api.add_resource(FolderListResource, '/folders')
 api.add_resource(FolderUploadResource, '/upload_folder')
 api.add_resource(FolderResource, '/folder/<int:folder_id>')
+
+class FileListResource(Resource):
+    @jwt_required()
+    def get(self):
+        files = File.query.all()
+        file_list = [file.serialize() for file in files]
+        return jsonify({'files': file_list})
+
+class FileUploadResource(Resource):
+    @jwt_required()
+    def post(self):
+
+        current_user_id = get_jwt_identity()
+
+        parser = reqparse.RequestParser()
+        parser.add_argument('file', type=FileStorage, location='files')
+        parser.add_argument('file_name', type=str, required=True)
+        parser.add_argument('file_type', type=str, required=True)
+        parser.add_argument('file_image', type=str)
+        parser.add_argument('folder_id', type=int, required=True)  
+
+        args = parser.parse_args()
+        uploaded_file = args['file']
+        file_name = args['file_name']
+        file_type = args['file_type']
+        file_image = args['file_image']
+        folder_id = args['folder_id'] 
+
+        if uploaded_file:
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], file_name)
+            uploaded_file.save(file_path)
+
+            folder = Folder.query.filter_by(folder_id=folder_id).first()
+
+            if folder:
+                new_file = File(
+                    file_name=file_name,
+                    file_path=file_path,
+                    file_type=file_type,
+                    file_image=file_image,
+                    upload_date=datetime.now(),
+                    user_id=current_user_id,
+                    folder_id=folder_id  
+                )
+                db.session.add(new_file)
+                db.session.commit()
+
+                return jsonify({'message': 'File uploaded successfully'})
+            else:
+                return jsonify({'message': 'Invalid folder ID'}), 400
+
+        return jsonify({'message': 'No file found in the request'})
+
+class FileDownloadResource(Resource):
+    @jwt_required()
+    def get(self, file_id):
+        file = db.session.get(File, file_id)
+        if file:
+            return send_from_directory(directory=app.config['UPLOAD_FOLDER'], path=file.file_path, as_attachment=True)
+        return jsonify({'message': 'File not found'}), 404
+
+class FileDeleteResource(Resource):
+    @jwt_required()
+    def delete(self, file_id):
+        file = File.query.get(file_id)
+        if file:
+            db.session.delete(file)
+            db.session.commit()
+            return jsonify({'message': f'File {file_id} deleted successfully'}), 200
+        else:
+            abort(404, message="File not found")
+
+api.add_resource(FileListResource, '/files')
+api.add_resource(FileUploadResource, '/upload')
+api.add_resource(FileDownloadResource, '/download/<int:file_id>')
+api.add_resource(FileDeleteResource, '/file/<int:file_id>')
 
 
 if __name__ == '__main__':
