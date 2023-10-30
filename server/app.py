@@ -30,10 +30,10 @@ db.init_app(app)
 api = Api(app)
 
 class RegistrationForm(FlaskForm):
-    firstName = StringField('Lastname', validators=[DataRequired(),Length(min=4,max=255)])
-    lastName = StringField('Lastname', validators=[DataRequired(),Length(min=4,max=255)])
-    email = StringField('Email', validators=[DataRequired(),Email(),Length(max=255)])
-    password = PasswordField('Password',validators=[DataRequired(),Length(min=255)])
+    firstname = StringField('Firstname', validators=[DataRequired(),Length(min=4,max=100)])
+    lastname = StringField('Lastname', validators=[DataRequired(),Length(min=4,max=100)])
+    email = StringField('Email', validators=[DataRequired(),Email(),Length(max=100)])
+    password = PasswordField('Password',validators=[DataRequired(),Length(min=3)])
     
 class UserRegistrationResource(Resource):
     def post(self):
@@ -41,18 +41,18 @@ class UserRegistrationResource(Resource):
         form = RegistrationForm(data=data)
         
         if form.validate():
-            first_name = form.firstName.data
-            last_name = form.lastName.data
+            first_name = form.firstname.data
+            last_name = form.lastname.data
             email = form.email.data
             password = form.password.data
 
             if User.query.filter(User.email == email).first() is not None:
-                return {'message': 'Username already exists'}, 400
+                return {'message': 'Email already exists'}, 400
             
-            new_user = User(firstname=first_name, lastname=last_name, email=email, password=password)
+            new_user = User(first_name=first_name, last_name=last_name, email=email, password=password)
             db.session.add(new_user)
             db.session.commit()
-            access_token = create_access_token(identity=new_user.id)
+            access_token = create_access_token(identity=new_user.user_id)
 
             return {
                 'message': "User registered successfully",
@@ -69,11 +69,11 @@ class UserLogInResource(Resource):
         email = data.get('email')
         password = data.get('password')
         if not email or not password:
-            return{'message':'email and password required'},400
+            return{'message':'Email and password required'},400
         
-        user = User.query.filter_by(username=email).first()
+        user = User.query.filter_by(email=email).first()
         if user and user.password == password:
-            access_token= create_access_token(identity=user.id)
+            access_token= create_access_token(identity=user.user_id)
             return {'access token':access_token},200
         else:
             return {'message':'Invalid credentials'},401
