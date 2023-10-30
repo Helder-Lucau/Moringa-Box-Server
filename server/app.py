@@ -23,7 +23,7 @@ app.config['WTF_CSRF_ENABLED'] = False
 
 jwt = JWTManager(app)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///moringa_box.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://moringa_box_db_user:S3Yg6LuOyiinvffLP4Y7MMuXx9vbZDAj@dpg-ckta8co168ec73bopsfg-a.oregon-postgresql.render.com/moringa_box_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 app.json.compact = False
@@ -86,7 +86,7 @@ class UserLogInResource(Resource):
 api.add_resource(UserLogInResource,'/login')
 
 class FolderListResource(Resource):
-    @jwt_required()
+    # @jwt_required()
     def get(self):
         folders = Folder.query.all()
         folder_list = [{'folder_id': folder.folder_id, 'folder_name': folder.folder_name} for folder in folders]
@@ -134,7 +134,7 @@ api.add_resource(FolderUploadResource, '/upload_folder')
 api.add_resource(FolderResource, '/folder/<int:folder_id>')
 
 class FileListResource(Resource):
-    @jwt_required()
+    # @jwt_required()
     def get(self):
         files = File.query.all()
         file_list = [file.serialize() for file in files]
@@ -208,7 +208,6 @@ api.add_resource(FileListResource, '/files')
 api.add_resource(FileUploadResource, '/upload')
 api.add_resource(FileDownloadResource, '/download/<int:file_id>')
 api.add_resource(FileDeleteResource, '/file/<int:file_id>')
-
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
