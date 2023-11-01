@@ -120,7 +120,7 @@ with app.app_context():
     {
         'file_name': 'dog.jpg',
         'file_path': '/path/to/dog.jpg',
-        'file_image':'',
+        'file_image':'https://images.unsplash.com/photo-1530281700549-e82e7bf110d6?auto=format&fit=crop&q=80&w=1888&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
         'file_type': 'jpg',
         'user_id': 3,  
         'folder_id': 3,  
@@ -145,7 +145,6 @@ with app.app_context():
         'upload_date': datetime.now(),
     },
     {
-        
         'file_name': 'essay.pdf',
         'file_path': '/path/to/essay.pdf',
         'file_image':'https://images.unsplash.com/photo-1504691342899-4d92b50853e1?auto=format&fit=crop&q=80&w=2070&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
