@@ -82,10 +82,10 @@ with app.app_context():
     # Seed file data
     files_data = [
     {
-        'file_name': 'journal.txt',
-        'file_path': '/path/to/journal.txt',
+        'file_name': 'travel_guide.pdf',
+        'file_path': '/path/to/travel_guide.pdf',
         'file_image':'',
-        'file_type': 'text',
+        'file_type': 'pdf',
         'user_id': 1,  
         'folder_id': 1,  
         'upload_date': datetime.now(),
