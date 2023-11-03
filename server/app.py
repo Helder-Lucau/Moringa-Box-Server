@@ -1,9 +1,10 @@
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, Response, send_file
 from flask_migrate import Migrate
 from flask_cors import CORS
 from flask_restful import Api, Resource,reqparse, abort
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from werkzeug.datastructures import FileStorage
+from werkzeug.utils import secure_filename
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField
 from wtforms.validators import DataRequired, Length, Email 
@@ -15,9 +16,15 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['JWT_SECRET_KEY'] = 'jwt_secret_key'
 
+# Set up the UPLOAD_FOLDER
 current_directory = os.getcwd()  
-app.config['UPLOAD_FOLDER'] = os.path.join(current_directory, 'uploads')
+UPLOAD_FOLDER = os.path.join(current_directory, 'uploads')
 
+# Check if the UPLOAD_FOLDER exists, if not, create it
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 app.config['WTF_CSRF_ENABLED'] = False
 
@@ -143,54 +150,57 @@ class FileListResource(Resource):
 class FileUploadResource(Resource):
     @jwt_required()
     def post(self):
-
         current_user_id = get_jwt_identity()
 
-        parser = reqparse.RequestParser()
-        parser.add_argument('file', type=FileStorage, location='files')
-        parser.add_argument('file_name', type=str, required=True)
-        parser.add_argument('file_type', type=str, required=True)
-        parser.add_argument('file_image', type=str)
-        parser.add_argument('folder_id', type=int, required=True)  
+        if request.content_type != 'application/json':
+            uploaded_file = request.files.get('file')
+            folder_id = request.form.get('folder_id')
 
-        args = parser.parse_args()
-        uploaded_file = args['file']
-        file_name = args['file_name']
-        file_type = args['file_type']
-        file_image = args['file_image']
-        folder_id = args['folder_id'] 
+            if uploaded_file and folder_id:
+                file_name = secure_filename(uploaded_file.filename)
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], file_name)
+                uploaded_file.save(file_path)
 
-        if uploaded_file:
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], file_name)
-            uploaded_file.save(file_path)
+                file_type = file_name.rsplit('.', 1)[1].lower()  
 
-            folder = Folder.query.filter_by(folder_id=folder_id).first()
+                folder = Folder.query.filter_by(folder_id=folder_id).first()
 
-            if folder:
-                new_file = File(
-                    file_name=file_name,
-                    file_path=file_path,
-                    file_type=file_type,
-                    file_image=file_image,
-                    upload_date=datetime.now(),
-                    user_id=current_user_id,
-                    folder_id=folder_id  
-                )
-                db.session.add(new_file)
-                db.session.commit()
+                if folder:
+                    new_file = File(
+                        file_name=file_name,
+                        file_path=file_path,
+                        file_type=file_type,
+                        upload_date=datetime.now(),
+                        user_id=current_user_id,
+                        folder_id=folder_id
+                    )
 
-                return jsonify({'message': 'File uploaded successfully'})
-            else:
-                return jsonify({'message': 'Invalid folder ID'}), 400
+                    # Check if 'file_image' parameter is present in the request
+                    uploaded_image = request.files.get('file_image')
+                    if uploaded_image:
+                        file_image_name = secure_filename(uploaded_image.filename)
+                        file_image_path = os.path.join(app.config['UPLOAD_FOLDER'], file_image_name)
+                        uploaded_image.save(file_image_path)
+                        new_file.file_image = file_image_path  
 
-        return jsonify({'message': 'No file found in the request'})
+                    db.session.add(new_file)
+                    db.session.commit()
+
+                    return jsonify({'message': 'File uploaded successfully'})
+                else:
+                    return jsonify({'message': 'Invalid folder ID'}), 400
+
+            return jsonify({'message': 'No file or folder ID found in the request'})
+
+        return jsonify({'message': 'Expected a different content type'})
+
 
 class FileDownloadResource(Resource):
     @jwt_required()
     def get(self, file_id):
-        file = db.session.get(File, file_id)
+        file = File.query.filter_by(id=file_id).first()
         if file:
-            return send_from_directory(directory=app.config['UPLOAD_FOLDER'], path=file.file_path, as_attachment=True)
+            return send_file(file.file_path, as_attachment=True)
         return jsonify({'message': 'File not found'}), 404
 
 class FileDeleteResource(Resource):
