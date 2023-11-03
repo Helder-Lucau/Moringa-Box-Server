@@ -121,7 +121,7 @@ class FolderUploadResource(Resource):
 
         return {'message': 'Folder uploaded successfully'}, 200
 
-class FolderResource(Resource):
+class FolderDeleteResource(Resource):
     @jwt_required()
     def delete(self, folder_id):
         folder_to_delete = Folder.query.get(folder_id)
@@ -135,10 +135,22 @@ class FolderResource(Resource):
             db.session.commit()
             return {'message': f'Folder {folder_id} deleted successfully'}, 200
         return {'message': f'Folder {folder_id} not found'}, 404
+    
+class FolderContentsResource(Resource):
+    @jwt_required()
+    def get(self, folder_id):
+        folder = Folder.query.get(folder_id)
+        if folder:
+            files = File.query.filter_by(folder_id=folder_id).all()
+            file_list = [{'file_id': file.file_id, 'file_name': file.file_name} for file in files]
+            return {'folder_id': folder_id, 'folder_name': folder.folder_name, 'files': file_list}, 200
+        return {'message': f'Folder {folder_id} not found'}, 404
 
+
+api.add_resource(FolderContentsResource, '/folder_contents/<int:folder_id>')
 api.add_resource(FolderListResource, '/folders')
 api.add_resource(FolderUploadResource, '/upload_folder')
-api.add_resource(FolderResource, '/folder/<int:folder_id>')
+api.add_resource(FolderDeleteResource, '/folder/<int:folder_id>')
 
 class FileListResource(Resource):
     # @jwt_required()
@@ -212,6 +224,7 @@ class FileDownloadResource(Resource):
             return send_file(file.file_path, as_attachment=True)
         else:
             return make_response(jsonify({'message': 'File not found'}), 404)
+        
 class FileDeleteResource(Resource):
     @jwt_required()
     def delete(self, file_id):
