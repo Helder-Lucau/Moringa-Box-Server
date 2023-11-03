@@ -146,7 +146,24 @@ class FolderContentsResource(Resource):
             return {'folder_id': folder_id, 'folder_name': folder.folder_name, 'files': file_list}, 200
         return {'message': f'Folder {folder_id} not found'}, 404
 
+class MoveFileResource(Resource):
+    @jwt_required()
+    def put(self, file_id, new_folder_id):
+        file_to_move = File.query.get(file_id)
+        destination_folder = Folder.query.get(new_folder_id)
 
+        if file_to_move:
+            if destination_folder:
+                # Update the file's folder_id to the new_folder_id
+                file_to_move.folder_id = new_folder_id
+                db.session.commit()
+                return {'message': f'File {file_id} moved to folder {new_folder_id}'}, 200
+            else:
+                return {'message': f'Destination folder {new_folder_id} does not exist'}, 404
+        else:
+            return {'message': f'File {file_id} not found'}, 404
+
+api.add_resource(MoveFileResource, '/move_file/<int:file_id>/<int:new_folder_id>')
 api.add_resource(FolderContentsResource, '/folder_contents/<int:folder_id>')
 api.add_resource(FolderListResource, '/folders')
 api.add_resource(FolderUploadResource, '/upload_folder')
