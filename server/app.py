@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_from_directory, Response, send_file
+from flask import Flask, jsonify, request, send_file, make_response
 from flask_migrate import Migrate
 from flask_cors import CORS
 from flask_restful import Api, Resource,reqparse, abort
@@ -194,15 +194,24 @@ class FileUploadResource(Resource):
 
         return jsonify({'message': 'Expected a different content type'})
 
+class FileImageResource(Resource):
+    def get(self, file_id):
+        file = File.query.filter_by(file_id=file_id).first()
+
+        if file:
+            image_path = file.file_image
+            return send_file(image_path)
+        else:
+            return jsonify({'message': 'File not found'}), 404
 
 class FileDownloadResource(Resource):
     @jwt_required()
     def get(self, file_id):
-        file = File.query.filter_by(id=file_id).first()
+        file = File.query.filter_by(file_id=file_id).first()
         if file:
             return send_file(file.file_path, as_attachment=True)
-        return jsonify({'message': 'File not found'}), 404
-
+        else:
+            return make_response(jsonify({'message': 'File not found'}), 404)
 class FileDeleteResource(Resource):
     @jwt_required()
     def delete(self, file_id):
@@ -218,6 +227,7 @@ api.add_resource(FileListResource, '/files')
 api.add_resource(FileUploadResource, '/upload')
 api.add_resource(FileDownloadResource, '/download/<int:file_id>')
 api.add_resource(FileDeleteResource, '/file/<int:file_id>')
+api.add_resource(FileImageResource, '/file-image/<int:file_id>') 
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
