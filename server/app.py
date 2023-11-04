@@ -147,9 +147,9 @@ class FolderContentsResource(Resource):
         return {'message': f'Folder {folder_id} not found'}, 404
 
 
-api.add_resource(FolderContentsResource, '/folder_contents/<int:folder_id>')
+api.add_resource(FolderContentsResource, '/folder-contents/<int:folder_id>')
 api.add_resource(FolderListResource, '/folders')
-api.add_resource(FolderUploadResource, '/upload_folder')
+api.add_resource(FolderUploadResource, '/upload-folder')
 api.add_resource(FolderDeleteResource, '/folder/<int:folder_id>')
 
 class FileListResource(Resource):
@@ -166,43 +166,78 @@ class FileUploadResource(Resource):
 
         if request.content_type != 'application/json':
             uploaded_file = request.files.get('file')
-            folder_id = request.form.get('folder_id')
+            folder_id = request.form.get('folder_id') 
 
-            if uploaded_file and folder_id:
+            if uploaded_file:
                 file_name = secure_filename(uploaded_file.filename)
                 file_path = os.path.join(app.config['UPLOAD_FOLDER'], file_name)
                 uploaded_file.save(file_path)
 
-                file_type = file_name.rsplit('.', 1)[1].lower()  
+                file_type = file_name.rsplit('.', 1)[1].lower()
 
-                folder = Folder.query.filter_by(folder_id=folder_id).first()
+                new_file = File(
+                    file_name=file_name,
+                    file_path=file_path,
+                    file_type=file_type,
+                    upload_date=datetime.now(),
+                    user_id=current_user_id,
+                    folder_id=folder_id if folder_id else None 
+                )
 
-                if folder:
-                    new_file = File(
-                        file_name=file_name,
-                        file_path=file_path,
-                        file_type=file_type,
-                        upload_date=datetime.now(),
-                        user_id=current_user_id,
-                        folder_id=folder_id
-                    )
+                uploaded_image = request.files.get('file_image')
+                if uploaded_image:
+                    file_image_name = secure_filename(uploaded_image.filename)
+                    file_image_path = os.path.join(app.config['UPLOAD_FOLDER'], file_image_name)
+                    uploaded_image.save(file_image_path)
+                    new_file.file_image = file_image_path
 
-                    # Check if 'file_image' parameter is present in the request
-                    uploaded_image = request.files.get('file_image')
-                    if uploaded_image:
-                        file_image_name = secure_filename(uploaded_image.filename)
-                        file_image_path = os.path.join(app.config['UPLOAD_FOLDER'], file_image_name)
-                        uploaded_image.save(file_image_path)
-                        new_file.file_image = file_image_path  
+                db.session.add(new_file)
+                db.session.commit()
 
-                    db.session.add(new_file)
-                    db.session.commit()
+                return jsonify({'message': 'File uploaded successfully'})
+            else:
+                return jsonify({'message': 'No file found in the request'})
 
-                    return jsonify({'message': 'File uploaded successfully'})
-                else:
-                    return jsonify({'message': 'Invalid folder ID'}), 400
+        return jsonify({'message': 'Expected a different content type'})
 
-            return jsonify({'message': 'No file or folder ID found in the request'})
+class FileUploadInFolderResource(Resource):
+    @jwt_required()
+    def post(self, folder_id):
+        current_user_id = get_jwt_identity()
+
+        if request.content_type != 'application/json':
+            uploaded_file = request.files.get('file')
+
+            if uploaded_file:
+                file_name = secure_filename(uploaded_file.filename)
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], file_name)
+                uploaded_file.save(file_path)
+
+                file_type = file_name.rsplit('.', 1)[1].lower()
+
+                new_file = File(
+                    file_name=file_name,
+                    file_path=file_path,
+                    file_type=file_type,
+                    upload_date=datetime.now(),
+                    user_id=current_user_id,
+                    folder_id=folder_id
+                )
+
+                # Check if 'file_image' parameter is present in the request
+                uploaded_image = request.files.get('file_image')
+                if uploaded_image:
+                    file_image_name = secure_filename(uploaded_image.filename)
+                    file_image_path = os.path.join(app.config['UPLOAD_FOLDER'], file_image_name)
+                    uploaded_image.save(file_image_path)
+                    new_file.file_image = file_image_path
+
+                db.session.add(new_file)
+                db.session.commit()
+
+                return jsonify({'message': 'File uploaded successfully'})
+            else:
+                return jsonify({'message': 'No file found in the request'})
 
         return jsonify({'message': 'Expected a different content type'})
 
@@ -243,7 +278,6 @@ class MoveFileResource(Resource):
 
         if file_to_move:
             if destination_folder:
-                # Update the file's folder_id to the new_folder_id
                 file_to_move.folder_id = new_folder_id
                 db.session.commit()
                 return {'message': f'File {file_id} moved to folder {new_folder_id}'}, 200
@@ -252,10 +286,11 @@ class MoveFileResource(Resource):
         else:
             return {'message': f'File {file_id} not found'}, 404
 
-api.add_resource(MoveFileResource, '/move_file/<int:file_id>/<int:new_folder_id>')           
+api.add_resource(MoveFileResource, '/move-file/<int:file_id>/<int:new_folder_id>')           
 api.add_resource(FileListResource, '/files')
-api.add_resource(FileUploadResource, '/upload')
 api.add_resource(FileDownloadResource, '/download/<int:file_id>')
+api.add_resource(FileUploadResource, '/upload')
+api.add_resource(FileUploadInFolderResource, '/upload/<int:folder_id>')
 api.add_resource(FileDeleteResource, '/file/<int:file_id>')
 api.add_resource(FileImageResource, '/file-image/<int:file_id>') 
 
