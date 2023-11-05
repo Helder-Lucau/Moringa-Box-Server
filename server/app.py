@@ -205,6 +205,10 @@ class FileUploadInFolderResource(Resource):
     def post(self, folder_id):
         current_user_id = get_jwt_identity()
 
+        folder = Folder.query.filter_by(folder_id=folder_id).first()
+        if not folder:
+            return make_response(jsonify({'message': 'Invalid folder ID'}), 400)
+
         if request.content_type != 'application/json':
             uploaded_file = request.files.get('file')
 
@@ -224,7 +228,6 @@ class FileUploadInFolderResource(Resource):
                     folder_id=folder_id
                 )
 
-                # Check if 'file_image' parameter is present in the request
                 uploaded_image = request.files.get('file_image')
                 if uploaded_image:
                     file_image_name = secure_filename(uploaded_image.filename)
@@ -249,7 +252,7 @@ class FileImageResource(Resource):
             image_path = file.file_image
             return send_file(image_path)
         else:
-            return jsonify({'message': 'File not found'}), 404
+            return make_response(jsonify({'message': 'File not found'}), 404)
 
 class FileDownloadResource(Resource):
     @jwt_required()
@@ -267,9 +270,10 @@ class FileDeleteResource(Resource):
         if file:
             db.session.delete(file)
             db.session.commit()
-            return jsonify({'message': f'File {file_id} deleted successfully'}), 200
+            return make_response(jsonify({'message': f'File {file_id} deleted successfully'}), 200)
         else:
             abort(404, message="File not found")
+            
 class MoveFileResource(Resource):
     @jwt_required()
     def put(self, file_id, new_folder_id):
