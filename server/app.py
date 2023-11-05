@@ -30,7 +30,7 @@ app.config['WTF_CSRF_ENABLED'] = False
 
 jwt = JWTManager(app)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://moringa_box_db_qidb_user:3swdbhjUbl6EE6cr9Sj71iDALYdDHITW@dpg-cl32o2ot3kic73d63220-a.oregon-postgres.render.com/moringa_box_db_qidb'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://moringa_box_db_qidb_user:3swdbhjUbl6EE6cr9Sj71iDALYdDHITW@dpg-cl32o2ot3kic73d63220-a.oregon-postgres.render.com/moringa_box_db_qidb?sslmode=require'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 app.json.compact = False
