@@ -93,14 +93,14 @@ class UserLogInResource(Resource):
 api.add_resource(UserLogInResource,'/login')
 
 class FolderListResource(Resource):
-    @jwt_required()
+    # @jwt_required()
     def get(self):
         folders = Folder.query.all()
         folder_list = [{'folder_id': folder.folder_id, 'folder_name': folder.folder_name} for folder in folders]
         return {'folders': folder_list}, 200
 
 class FolderUploadResource(Resource):
-    @jwt_required()
+    # @jwt_required()
     def post(self):
         parser = reqparse.RequestParser()
         parser.add_argument('folder_name', type=str, required=True)
@@ -122,7 +122,7 @@ class FolderUploadResource(Resource):
         return {'message': 'Folder uploaded successfully'}, 200
 
 class FolderDeleteResource(Resource):
-    @jwt_required()
+    @jwt_required()  
     def delete(self, folder_id):
         folder_to_delete = Folder.query.get(folder_id)
         if folder_to_delete:
@@ -153,14 +153,14 @@ api.add_resource(FolderUploadResource, '/upload-folder')
 api.add_resource(FolderDeleteResource, '/folder/<int:folder_id>')
 
 class FileListResource(Resource):
-    @jwt_required()
+    # @jwt_required()
     def get(self):
         files = File.query.all()
         file_list = [file.serialize() for file in files]
         return jsonify({'files': file_list})
 
 class FileUploadResource(Resource):
-    @jwt_required()
+    # @jwt_required()
     def post(self):
         current_user_id = get_jwt_identity()
 
