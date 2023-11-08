@@ -100,7 +100,7 @@ class FolderListResource(Resource):
         return {'folders': folder_list}, 200
 
 class FolderUploadResource(Resource):
-    # @jwt_required()
+    @jwt_required()
     def post(self):
         parser = reqparse.RequestParser()
         parser.add_argument('folder_name', type=str, required=True)
@@ -160,7 +160,7 @@ class FileListResource(Resource):
         return jsonify({'files': file_list})
 
 class FileUploadResource(Resource):
-    # @jwt_required()
+    @jwt_required()
     def post(self):
         current_user_id = get_jwt_identity()
 
