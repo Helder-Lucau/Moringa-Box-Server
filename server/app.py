@@ -80,28 +80,36 @@ class UserLogInResource(Resource):
         data = request.get_json()
         email = data.get('email')
         password = data.get('password')
+        
         if not email or not password:
-            return{'message':'Email and password required'},400
+            return {'message': 'Email and password required'}, 400
         
         user = User.query.filter_by(email=email).first()
         if user and user.password == password:
-            access_token= create_access_token(identity=user.user_id)
-            return {'access token':access_token},200
+            access_token = create_access_token(identity=user.user_id)
+            user_data = {
+                'user_id': user.user_id,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'email': user.email
+            }
+            return {
+                'message': 'Login successful',
+                'user': user_data,
+                'access_token': access_token
+            }, 200
         else:
-            return {'message':'Invalid credentials'},401
-        
-api.add_resource(UserLogInResource,'/login')
+            return {'message': 'Invalid credentials'}, 401
+
+api.add_resource(UserLogInResource, '/login')
 
 class FolderListResource(Resource):
     # @jwt_required()
-     def get(self):
-        current_user_id = get_jwt_identity()
-        user_folders = Folder.query.filter_by(user_id=current_user_id).all()
-        folder_list = [{'folder_id': folder.folder_id, 'folder_name': folder.folder_name} for folder in user_folders]
+      def get(self):
+        folders = Folder.query.all()
+        folder_list = [{'folder_id': folder.folder_id, 'folder_name': folder.folder_name} for folder in folders]
         return {'folders': folder_list}, 200
      
-from flask_jwt_extended import jwt_required, get_jwt_identity
-
 class FolderUploadResource(Resource):
     @jwt_required()
     def post(self):
@@ -170,9 +178,8 @@ api.add_resource(FolderDeleteResource, '/folder/<int:folder_id>')
 class FileListResource(Resource):
     # @jwt_required()
     def get(self):
-        current_user_id = get_jwt_identity()
-        user_files = File.query.filter_by(user_id=current_user_id).all()
-        file_list = [file.serialize() for file in user_files]
+        files = File.query.all()
+        file_list = [file.serialize() for file in files]
         return jsonify({'files': file_list})
     
 class FileUploadResource(Resource):
