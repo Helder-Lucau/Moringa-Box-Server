@@ -32,7 +32,7 @@ class File(db.Model, SerializerMixin):
     file_image = db.Column(db.String(255))
     file_type = db.Column(db.String(255), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
-    folder_id = db.Column(db.Integer, db.ForeignKey('folders.folder_id'), nullable=False)
+    folder_id = db.Column(db.Integer, db.ForeignKey('folders.folder_id'), nullable=True)
     upload_date = db.Column(db.DateTime, nullable=False)
 
     def serialize(self):
