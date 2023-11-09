@@ -94,17 +94,20 @@ api.add_resource(UserLogInResource,'/login')
 
 class FolderListResource(Resource):
     # @jwt_required()
-    def get(self):
-        folders = Folder.query.all()
-        folder_list = [{'folder_id': folder.folder_id, 'folder_name': folder.folder_name} for folder in folders]
+     def get(self):
+        current_user_id = get_jwt_identity()
+        user_folders = Folder.query.filter_by(user_id=current_user_id).all()
+        folder_list = [{'folder_id': folder.folder_id, 'folder_name': folder.folder_name} for folder in user_folders]
         return {'folders': folder_list}, 200
+     
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 class FolderUploadResource(Resource):
     @jwt_required()
     def post(self):
         parser = reqparse.RequestParser()
         parser.add_argument('folder_name', type=str, required=True)
-        parser.add_argument('parent_folder_id', type=int)  
+        parser.add_argument('parent_folder_id', type=int)
 
         args = parser.parse_args()
         folder_name = args['folder_name']
@@ -114,19 +117,30 @@ class FolderUploadResource(Resource):
         new_folder = Folder(
             folder_name=folder_name,
             user_id=current_user_id,
-            parent_folder_id=parent_folder_id,  
+            parent_folder_id=parent_folder_id,
         )
         db.session.add(new_folder)
         db.session.commit()
 
-        return {'message': 'Folder uploaded successfully'}, 200
+        user_folders = Folder.query.filter_by(user_id=current_user_id).all()
+        folder_list = [
+            {
+                'folder_id': folder.folder_id,
+                'folder_name': folder.folder_name
+            }
+            for folder in user_folders
+        ]
+
+        return {'message': 'Folder uploaded successfully', 'folders': folder_list}, 200
+
 
 class FolderDeleteResource(Resource):
     @jwt_required()  
     def delete(self, folder_id):
-        folder_to_delete = Folder.query.get(folder_id)
+        current_user_id = get_jwt_identity()
+        folder_to_delete = Folder.query.filter_by(folder_id=folder_id, user_id=current_user_id).first()
+
         if folder_to_delete:
-            
             files_in_folder = File.query.filter_by(folder_id=folder_id).all()
             for file in files_in_folder:
                 db.session.delete(file)
@@ -134,12 +148,13 @@ class FolderDeleteResource(Resource):
             db.session.delete(folder_to_delete)
             db.session.commit()
             return {'message': f'Folder {folder_id} deleted successfully'}, 200
-        return {'message': f'Folder {folder_id} not found'}, 404
+        return {'message': f'Folder {folder_id} not found or unauthorized'}, 404
     
 class FolderContentsResource(Resource):
     @jwt_required()
     def get(self, folder_id):
-        folder = Folder.query.get(folder_id)
+        current_user_id = get_jwt_identity()
+        folder = Folder.query.filter_by(folder_id=folder_id, user_id=current_user_id).first()
         if folder:
             files = File.query.filter_by(folder_id=folder_id).all()
             file_list = [{'file_id': file.file_id, 'file_name': file.file_name} for file in files]
@@ -155,10 +170,11 @@ api.add_resource(FolderDeleteResource, '/folder/<int:folder_id>')
 class FileListResource(Resource):
     # @jwt_required()
     def get(self):
-        files = File.query.all()
-        file_list = [file.serialize() for file in files]
+        current_user_id = get_jwt_identity()
+        user_files = File.query.filter_by(user_id=current_user_id).all()
+        file_list = [file.serialize() for file in user_files]
         return jsonify({'files': file_list})
-
+    
 class FileUploadResource(Resource):
     @jwt_required()
     def post(self):
@@ -166,7 +182,7 @@ class FileUploadResource(Resource):
 
         if request.content_type != 'application/json':
             uploaded_file = request.files.get('file')
-            folder_id = request.form.get('folder_id') 
+            folder_id = request.form.get('folder_id')
 
             if uploaded_file:
                 file_name = secure_filename(uploaded_file.filename)
@@ -181,7 +197,7 @@ class FileUploadResource(Resource):
                     file_type=file_type,
                     upload_date=datetime.now(),
                     user_id=current_user_id,
-                    folder_id=folder_id if folder_id else None 
+                    folder_id=folder_id if folder_id else None
                 )
 
                 uploaded_image = request.files.get('file_image')
@@ -194,7 +210,17 @@ class FileUploadResource(Resource):
                 db.session.add(new_file)
                 db.session.commit()
 
-                return jsonify({'message': 'File uploaded successfully'})
+                # Fetch the user object after uploading the file
+                user = User.query.get(current_user_id)
+                user_data = {
+                    'user_id': user.user_id,
+                    'email': user.email,  
+                }
+
+                return jsonify({
+                    'message': 'File uploaded successfully',
+                    'user': user_data  # Return the user object
+                })
             else:
                 return jsonify({'message': 'No file found in the request'})
 
@@ -258,7 +284,9 @@ class FileDownloadResource(Resource):
     @jwt_required()
     def get(self, file_id):
         file = File.query.filter_by(file_id=file_id).first()
-        if file:
+        current_user_id = get_jwt_identity()
+
+        if file and file.user_id == current_user_id:
             return send_file(file.file_path, as_attachment=True)
         else:
             return make_response(jsonify({'message': 'File not found'}), 404)
@@ -267,7 +295,9 @@ class FileDeleteResource(Resource):
     @jwt_required()
     def delete(self, file_id):
         file = File.query.get(file_id)
-        if file:
+        current_user_id = get_jwt_identity()
+
+        if file and file.user_id == current_user_id:
             db.session.delete(file)
             db.session.commit()
             return make_response(jsonify({'message': f'File {file_id} deleted successfully'}), 200)
@@ -277,11 +307,13 @@ class FileDeleteResource(Resource):
 class MoveFileResource(Resource):
     @jwt_required()
     def put(self, file_id, new_folder_id):
+        current_user_id = get_jwt_identity()
+
         file_to_move = File.query.get(file_id)
         destination_folder = Folder.query.get(new_folder_id)
 
-        if file_to_move:
-            if destination_folder:
+        if file_to_move and destination_folder:
+            if file_to_move.user_id == current_user_id:
                 file_to_move.folder_id = new_folder_id
                 db.session.commit()
                 return {'message': f'File {file_id} moved to folder {new_folder_id}'}, 200
